@@ -2,7 +2,7 @@ name: Deploy Lab-4 to GitHub Pages on Release
 
 on:
   release:
-    types: [published]  # Запуск при публикации релиза
+    types: [published]  # Запуск только при публикации релиза
 
 jobs:
   deploy:
@@ -19,12 +19,17 @@ jobs:
           submodules: false
           fetch-depth: 1
 
+      - name: Build site
+        working-directory: lab-4
+        run: npm install && npm run build
+        publish_dir: lab-4/dist
+
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-master@v4
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: lab-4  # Берем файлы из lab-4
-          publish_branch: master
-          destination_dir: lab-4/v${{ github.event.release.tag_name }}  # Поддиректория lab-4/v{тег}
-          force_orphan: false
-          keep_files: true  # Сохраняем прошлые версии
+          publish_dir: lab-4  # Директория с сайтом 
+          publish_branch: gh-pages  # Ветка для публикации
+          destination_dir: v${{ github.event.release.tag_name }}  # Поддиректория v{тег}, например v1.0
+          force_orphan: false  # Не стирать историю
+          keep_files: true  # Сохранять существующие файлы для прошлых версий
