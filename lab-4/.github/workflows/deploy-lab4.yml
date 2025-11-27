@@ -1,0 +1,32 @@
+name: Deploy Lab-4 to GitHub Pages on Release
+
+on:
+  release:
+    types: [published]  # Запуск при публикации релиза
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Если в lab-4 нужен билд (например, npm build), добавьте здесь
+      # - name: Build site
+      #   working-directory: lab-4  # Укажите директорию
+      #   run: npm install && npm run build
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: lab-4  # Берем файлы из lab-4
+          publish_branch: gh-pages
+          destination_dir: lab-4/v${{ github.event.release.tag_name }}  # Поддиректория lab-4/v{тег}, чтобы не смешивать с lab-3
+          force_orphan: false
+          keep_files: true  # Сохраняем прошлые версии
