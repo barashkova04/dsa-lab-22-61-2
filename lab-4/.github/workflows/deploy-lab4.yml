@@ -19,11 +19,6 @@ jobs:
           submodules: false
           fetch-depth: 1
 
-      - name: Build site
-        working-directory: lab-4
-        run: npm install && npm run build
-        publish_dir: lab-4/dist
-
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
