@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://bpmn.io/schema/bpmn">
+  
+  <process id="PurchaseRequestApproval" name="Формирование и согласование заявки на закупку" isExecutable="true">
+    
+    <!-- Стартовые события -->
+    <startEvent id="StartByInitiator" name="Запуск сотрудником-инициатором">
+      <messageEventDefinition messageRef="StartRequestMsg"/>
+    </startEvent>
+    
+    <startEvent id="StartByProcurementHead" name="Запуск руководителем отдела закупок">
+      <messageEventDefinition messageRef="ManualStartMsg"/>
+    </startEvent>
+    
+    <startEvent id="StartByManager" name="Запуск менеджером по закупкам">
+      <messageEventDefinition messageRef="ManualStartMsg"/>
+    </startEvent>
+
+    <!-- Проверка условий запуска -->
+    <exclusiveGateway id="CheckStartConditions" name="Проверка условий запуска"/>
+    
+    <serviceTask id="ValidateDraftStatus" name="Проверить статус Черновик" 
+                 camunda:class="org.example.ValidateDraftStatusDelegate">
+    </serviceTask>
+    
+    <serviceTask id="ValidateRequiredFields" name="Проверить обязательные поля" 
+                 camunda:class="org.example.ValidateRequiredFieldsDelegate">
+    </serviceTask>
+    
+    <serviceTask id="LockRequestFields" name="Заблокировать редактирование полей" 
+                 camunda:class="org.example.LockRequestFieldsDelegate">
+    </serviceTask>
+
+    <!-- Формирование маршрута согласования -->
+    <serviceTask id="GenerateApprovalRoute" name="Сформировать маршрут согласования" 
+                 camunda:class="org.example.GenerateApprovalRouteDelegate">
+    </serviceTask>
+
+    <!-- Процесс согласования -->
+    <callActivity id="ApprovalProcess" name="Процесс согласования" 
+                  calledElement="ApprovalRouteProcess">
+    </callActivity>
+
+    <!-- Обработка результатов согласования -->
+    <exclusiveGateway id="CheckApprovalResult" name="Проверка результата согласования"/>
+    
+    <serviceTask id="SendToProcurementManager" name="Передать менеджеру по закупкам" 
+                 camunda:class="org.example.SendToProcurementManagerDelegate">
+    </serviceTask>
+    
+    <serviceTask id="NotifyRejection" name="Уведомить об отклонении" 
+                 camunda:class="org.example.NotifyRejectionDelegate">
+    </serviceTask>
+    
+    <serviceTask id="RequestRevision" name="Запросить доработку" 
+                 camunda:class="org.example.RequestRevisionDelegate">
+    </serviceTask>
+
+    <!-- Конечные события -->
+    <endEvent id="RequestApproved" name="Заявка утверждена"/>
+    <endEvent id="RequestRejected" name="Заявка отклонена"/>
+    <endEvent id="RequestRevision" name="Заявка на доработке"/>
+    <endEvent id="InvalidStartConditions" name="Условия запуска не выполнены"/>
+
+    <!-- Потоки управления -->
+    <sequenceFlow id="flow1" sourceRef="StartByInitiator" targetRef="CheckStartConditions"/>
+    <sequenceFlow id="flow2" sourceRef="StartByProcurementHead" targetRef="CheckStartConditions"/>
+    <sequenceFlow id="flow3" sourceRef="StartByManager" targetRef="CheckStartConditions"/>
+    
+    <sequenceFlow id="flow4" sourceRef="CheckStartConditions" targetRef="ValidateDraftStatus">
+      <conditionExpression xsi:type="tFormalExpression">${requestStatus == 'Draft'}</conditionExpression>
+    </sequenceFlow>
+    
+    <sequenceFlow id="flow5" sourceRef="ValidateDraftStatus" targetRef="ValidateRequiredFields"/>
+    <sequenceFlow id="flow6" sourceRef="ValidateRequiredFields" targetRef="LockRequestFields"/>
+    <sequenceFlow id="flow7" sourceRef="LockRequestFields" targetRef="GenerateApprovalRoute"/>
+    <sequenceFlow id="flow8" sourceRef="GenerateApprovalRoute" targetRef="ApprovalProcess"/>
+    <sequenceFlow id="flow9" sourceRef="ApprovalProcess" targetRef="CheckApprovalResult"/>
+    
+    <sequenceFlow id="flow10" sourceRef="CheckApprovalResult" targetRef="SendToProcurementManager">
+      <conditionExpression xsi:type="tFormalExpression">${approvalResult == 'APPROVED'}</conditionExpression>
+    </sequenceFlow>
+    
+    <sequenceFlow id="flow11" sourceRef="CheckApprovalResult" targetRef="NotifyRejection">
+      <conditionExpression xsi:type="tFormalExpression">${approvalResult == 'REJECTED'}</conditionExpression>
+    </sequenceFlow>
+    
+    <sequenceFlow id="flow12" sourceRef="CheckApprovalResult" targetRef="RequestRevision">
+      <conditionExpression xsi:type="tFormalExpression">${approvalResult == 'REVISION'}</conditionExpression>
+    </sequenceFlow>
+    
+    <sequenceFlow id="flow13" sourceRef="SendToProcurementManager" targetRef="RequestApproved"/>
+    <sequenceFlow id="flow14" sourceRef="NotifyRejection" targetRef="RequestRejected"/>
+    <sequenceFlow id="flow15" sourceRef="RequestRevision" targetRef="RequestRevision"/>
+    
+    <sequenceFlow id="flow16" sourceRef="CheckStartConditions" targetRef="InvalidStartConditions">
+      <conditionExpression xsi:type="tFormalExpression">${requestStatus != 'Draft'}</conditionExpression>
+    </sequenceFlow>
+
+  </process>
+
+  <!-- Подпроцесс маршрута согласования -->
+  <process id="ApprovalRouteProcess" name="Маршрут согласования заявки">
+    
+    <startEvent id="ApprovalStart" name="Начало согласования"/>
+    
+    <userTask id="ApprovalTask" name="Согласование заявки" 
+              camunda:candidateGroups="${approverGroup}">
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="decision" label="Решение" type="string">
+            <camunda:value>APPROVE</camunda:value>
+            <camunda:value>REJECT</camunda:value>
+            <camunda:value>REVISION</camunda:value>
+          </camunda:formField>
+          <camunda:formField id="comments" label="Комментарии" type="string"/>
+        </camunda:formData>
+      </extensionElements>
+    </userTask>
+    
+    <boundaryEvent id="ApprovalTimer" name="Срок согласования" attachedToRef="ApprovalTask" cancelActivity="false">
+      <timerEventDefinition>
+        <timeDuration>PT24H</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    
+    <serviceTask id="SendReminder" name="Отправить напоминание" 
+                 camunda:class="org.example.SendReminderDelegate">
+    </serviceTask>
+    
+    <exclusiveGateway id="CheckDecision" name="Проверка решения"/>
+    
+    <endEvent id="ApprovalCompleted" name="Согласование завершено">
+      <terminateEventDefinition/>
+    </endEvent>
+    
+    <sequenceFlow id="aflow1" sourceRef="ApprovalStart" targetRef="ApprovalTask"/>
+    <sequenceFlow id="aflow2" sourceRef="ApprovalTimer" targetRef="SendReminder"/>
+    <sequenceFlow id="aflow3" sourceRef="SendReminder" targetRef="ApprovalTask"/>
+    <sequenceFlow id="aflow4" sourceRef="ApprovalTask" targetRef="CheckDecision"/>
+    <sequenceFlow id="aflow5" sourceRef="CheckDecision" targetRef="ApprovalCompleted"/>
+    
+  </process>
+
+</definitions>

@@ -43,3 +43,5 @@ case "$operator" in
 esac
 
 echo "Результат: $result"
+
+#./calculator.sh 10 + 5

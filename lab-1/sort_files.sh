@@ -17,3 +17,5 @@ fi
 # Вывод файлов, отсортированных по дате модификации
 echo "Файлы в директории '$directory' (отсортированы по дате модификации):"
 ls -lt "$directory" | grep -v '^total'
+
+#./sort_files.sh /mnt/c/programapp/dsa-lab-22-61
