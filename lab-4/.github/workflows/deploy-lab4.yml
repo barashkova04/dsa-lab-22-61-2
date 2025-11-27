@@ -24,7 +24,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: lab-4  # Берем файлы из lab-4
-          publish_branch: gh-pages
-          destination_dir: lab-4/v${{ github.event.release.tag_name }}  # Поддиректория lab-4/v{тег}, чтобы не смешивать с lab-3
+          publish_branch: master
+          destination_dir: lab-4/v${{ github.event.release.tag_name }}  # Поддиректория lab-4/v{тег}
           force_orphan: false
           keep_files: true  # Сохраняем прошлые версии
