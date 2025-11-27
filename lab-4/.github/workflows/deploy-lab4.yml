@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 1
 
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-master@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: lab-4  # Берем файлы из lab-4
