@@ -15,11 +15,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # Если в lab-4 нужен билд (например, npm build), добавьте здесь
-      # - name: Build site
-      #   working-directory: lab-4  # Укажите директорию
-      #   run: npm install && npm run build
+        with:
+          submodules: false
+          fetch-depth: 1
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
